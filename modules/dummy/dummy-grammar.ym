@@ -1,0 +1,107 @@
+/*
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 as published
+ * by the Free Software Foundation, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ *
+ * As an additional exemption you are allowed to compile & link against the
+ * OpenSSL libraries as published by the OpenSSL project. See the file
+ * COPYING for details.
+ *
+ */
+
+%code top {
+#include "dummy-parser.h"
+
+}
+
+
+%code requires {
+
+#include "cfg-grammar.h"
+#include "cfg-parser.h"
+#include "plugin.h"
+}
+
+%name-prefix "dummy_"
+%lex-param {CfgLexer *lexer}
+%parse-param {CfgLexer *lexer}
+%parse-param {LogDriver **instance}
+%parse-param {gpointer arg}
+
+/* INCLUDE_DECLS */
+
+%token KW_DUMMY_DEST
+%token KW_PATH
+%token KW_YESNO
+%token KW_MAX
+
+%token KW_DUMMY_SRC
+%token KW_NAME
+%token KW_MIN
+
+%%
+
+start
+    : LL_CONTEXT_DESTINATION KW_DUMMY_DEST
+    {
+        last_driver = *instance = dummy_dd_new(configuration); 
+    }
+    '(' dummy_dest_options ')'   { YYACCEPT; }
+    | LL_CONTEXT_SOURCE KW_DUMMY_SRC
+    {
+        last_driver = *instance = dummy_sd_new(configuration);
+    }
+    '(' dummy_src_options ')'   { YYACCEPT; }
+    ;
+
+dummy_dest_options
+    : dummy_dest_option dummy_dest_options
+    |
+    ;
+
+dummy_dest_option
+    : KW_PATH '(' string ')'
+    {
+        dummy_dd_set_path(last_driver, $3);
+        free($3);
+    }
+    | KW_YESNO '(' yesno ')'
+    {
+        dummy_dd_set_enable(last_driver, $3);
+    }
+    | KW_MAX '(' LL_NUMBER ')'
+    {
+        dummy_dd_set_max(last_driver, $3);
+    }
+    |
+    ;
+
+dummy_src_options
+    : dummy_src_option dummy_src_options
+    |
+    ;
+
+dummy_src_option
+    : KW_NAME '(' string ')'
+    {
+        dummy_sd_set_name(last_driver, $3);
+        free($3);
+    }
+    | KW_MIN '(' LL_NUMBER ')'
+    {
+        dummy_sd_set_min(last_driver, $3);
+    }
+    ;
+
+/* INCLUDE_RULES */
+
+%%
